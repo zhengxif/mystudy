@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script>
+        Function.prototype.myBind = function () {
+            let [target, ...arg] = [...arguments];
+            const that = this;
+            return function () {
+                that.call(target, ...[...arg, ...arguments])
+            }
+        }
+
+        const obj = {
+            a: 1,
+            b: 2
+        }
+        const a = 'a';
+        function print(value) {
+            console.log(this.a, value);
+        }
+        print.myBind(obj)('aaa');
+    </script>
+</head>
+<body>
+    
+</body>
+</html>

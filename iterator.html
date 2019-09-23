@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script>
+        // 迭代器
+        // es [...{0:'a',1:'b',length: 2}],类数组不能使用...展开符，因为没有迭代器[Symbol.iterator]， 手动实现下
+        console.log([1, 2, ...{
+            0: 'a',
+            1: 'b',
+            length: 2,
+            [Symbol.iterator](){
+                let index = 0;
+                return {
+                    next: () => {
+                        if (index !== this.length) {
+                            return {
+                                value: this[index++],
+                                done: false
+                            }
+                        } else {
+                            return {
+                                value: undefined,
+                                done: true
+                            }
+                        }
+                        
+                    }
+                }
+            }
+        }])
+        // 使用generator实现
+        console.log([1, 2, ...{
+            0: 'a',
+            1: 'b',
+            2: 'c',
+            length: 3,
+            [Symbol.iterator]: function *() {
+                // generator 有自己的next迭代方法
+                let index = 0;
+                while (index !== this.length) {
+                    yield this[index++];
+                }
+            }
+        }])
+        /****************************************************************************************/
+        // 实现co方法，告别next()回调地狱
+        /** 
+         * it 迭代器, generator函数
+        */
+        function co(generator) {
+            const it = generator();
+            return new Promise((resolve, reject) => {
+                function myNext(data) {
+                    let { value, done } = it.next(data);
+                    if (!done) {
+                        Promise.resolve(value).then(data => {
+                            myNext(data);
+                        }, error => {
+                            reject(error);
+                        })
+                    }else {
+                        resolve(value);
+                    }
+                }
+                myNext();
+            })
+        }
+        function * printFunc() {
+            let a = yield 1;   
+            console.log(a);
+            let b = yield 2;
+            console.log(b);
+            let c = yield 3;
+            console.log(c);
+        }
+        // const print = printFunc();
+        
+        // let a = print.next().value;
+        // //print.next(a)是将a传递给上一个已经执行完了的yield语句前面的变量，而不是即将执行的yield前面的变量
+        // let b = print.next(a).value;   //此时打印 console.log(a) aaa
+        // let c = print.next(b).value
+        // print.next(c)
+
+        //采用 co
+        co(printFunc)
+    </script>
+</head>
+<body>
+    
+</body>
+</html>

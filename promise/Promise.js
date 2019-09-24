@@ -2,6 +2,57 @@
 const PENGDING = 'PENGDING';
 const FULFILLED = 'FULFILLED';
 const REJECTED = 'REJECTED';
+function isPromise(value){
+    if((typeof value === 'object' && value!==null)  || typeof value =='function'){
+        if(typeof value.then === 'function'){
+            return true;
+        }
+    }
+    return false
+}
+function resolvePromise(promise2, x, resolve, reject) {
+    // x 来取决promise2是 成功还是失败
+    if (x === promise2) {
+        return rejec(
+            new TypeError(
+                "TypeError: Chaining cycle detected for promise #<Promise>11"
+            )
+        )
+    }
+    // 怎么判断x是不是一个promise
+    // 如果x是常量，那就直接用这个结果将promise 成功掉即可
+    let called;
+    if ((typeof x === 'object' && x !== null) || typeof x == 'function') {
+        // {}.then 所以x有可能定义了then方法
+        // 有可能是promise
+        try {
+            let then = x.then; // 取then可能发生异常
+            if (typeof then === 'function') {
+                //这里就只能认为它是promise
+                then.call(x,  y => {
+                    if (called) return; // 调用成功后 就不能再调用失败
+                    called = true;
+                    // 递归解析当前x的promise的返回结果，因为promise成功后可能返回的还是promise
+                    resolvePromise(promise2, y, resolve, reject);
+                }, r => {
+                    if (called) return; // 调用成功后 就不能再调用失败
+                    called = true;
+                    reject(r);
+                })
+            }else {
+                // {}, 普通对象
+                resolve(x);
+            }
+        } catch (error) {
+            if (called) return; // 调用成功后 就不能再调用失败
+            called = true;
+            reject(error);
+        }
+    }else {
+        //普通 字符串 number boolean
+        resolve(x);
+    }
+}
 class Promise {
     constructor(executor) {
         debugger
@@ -26,14 +77,22 @@ class Promise {
             reject(error);
         }
     }
+    // x是当前then 成功或者失败的返回结果
+    // x是不是普通值，如果是普通值就把值传递到下一个then中
+    // x是不是promise， 如果是则要采用这个x的状态
+    // 如果执行函数出错，则直接调用promise2的reject
     then(onFulfilled, onRejected) {
-        let promise2 = new Promise((reoslve, reject) => {
+        onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value;
+        onRejected = typeof onRejected === 'function' ? onRejected : error => { throw error };
+        let promise2 = new Promise((resolve, reject) => {
             // 如果上个promise状态是FUlFILLED, 那么直接执行then中onFulfilled,并调用resolve
             if (this.status == FULFILLED) {
                 setTimeout(() => {
                     try {
                         let x = onFulfilled(this.value);
-                        resolve(x);
+                        // 看x的返回结果，看一下x 是不是promise，在去让promise2 变成成功或者失败
+                        resolvePromise(promise2, x, resolve, reject);
+                        // resolve(x)
                     } catch (error) {
                         reject(error);
                     }
@@ -44,7 +103,7 @@ class Promise {
                 setTimeout(() => {
                     try {
                         let x = onRejected(this.reason);
-                        resolve(x);
+                        resolvePromise(promise2, x, resolve, reject);
                     } catch (error) {
                         reject(error);
                     }
@@ -55,7 +114,7 @@ class Promise {
                     setTimeout(() => {
                         try {
                             let x = onFulfilled(this.value);
-                            resolve(x);
+                            resolvePromise(promise2, x, resolve, reject);
                         } catch (error) {
                             reject(error);
                         }
@@ -65,7 +124,7 @@ class Promise {
                     setTimeout(() => {
                         try {
                             let x = onRejected(this.reason);
-                            resolve(x);
+                            resolvePromise(promise2, x, resolve, reject);
                         } catch (error) {
                             reject(error);
                         }
@@ -76,8 +135,39 @@ class Promise {
         })
         return promise2;
     }
+    static all(promises) {
+        return new Promise((resolve, reject) => {
+            let result = [];
+            let index = 0;
+            let processData = (i, y) => {
+                result[i] = y;
+                if (++index == promises.length) resolve(result); 
+            }
+            promises.forEach((promise, i) => {
+                if(isPromise(promise)) {
+                    promise.then( y => {
+                        processData(i, y);
+                    }, reject)
+                }else {
+                    processData(i, y);
+                }
+            })
+        })
+    }
 }
+Promise.defer = Promise.deferred = function() {
+    let dfd = {};
+    dfd.promise = new Promise((resolve, reject) => {
+      dfd.resolve = resolve;
+      dfd.reject = reject;
+    });
+    return dfd;
+};
+
 
 new Promise((resolve, reject) => {
-    resolve(1)
-}).then(data => console.log(data))
+    reject(1)
+}).then(data => console.log('成功：' + data), error => console.log('失败：'+error))
+
+
+module.exports = Promise; 

@@ -149,9 +149,38 @@ class Promise {
                         processData(i, y);
                     }, reject)
                 }else {
-                    processData(i, y);
+                    processData(i, promise);
                 }
             })
+        })
+    }
+    static race(promises) {
+        return Promise((resolve, reject) => {
+            promises.forEach(promise => {
+                if(isPromise(promise)) {
+                    promise.then( y => {
+                        resolve(y);
+                    }, reject)
+                }else {
+                    resolve(promise);
+                }
+            })
+        })
+    }
+    finally(cb) {
+        return new Promise((resolve, reject) => {
+            this.then(val => {
+                cb();
+                resolve(val)
+            },error => {
+                cb()
+                reject(val);
+            })
+        })
+    }
+    static try(cb) {
+        return new Promise((resolve, reject) => {
+            resolve(cb);
         })
     }
 }
@@ -171,3 +200,4 @@ new Promise((resolve, reject) => {
 
 
 module.exports = Promise; 
+

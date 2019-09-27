@@ -5,8 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
-    <script src="./promise.js"></script>
-    
+    <!-- <script src="./promise.js"></script> -->
+    <script>
+        new Promise((resolve, reject) => {
+            resolve(1)
+        }).then(data=> {
+            console.log('then:'+ data)
+            return data
+        }).finally((data) => {
+            console.log(data)
+            return 2
+        }).then(data => {
+            console.log('then2:' + data)
+        })
+    </script>
 </head>
 <body>
     
